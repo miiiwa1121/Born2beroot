@@ -6,8 +6,8 @@
 ---
 
 ## 質問 (Question)
-- **Q1. なぜ Debian を選んだのでしょうか?**
-- **Q2. Debian と CentOS の違いは何ですか?**
+- **なぜ Debian を選んだのでしょうか?**
+- **Debian と CentOS の違いは何ですか?**
 - **仮想マシンとは何ですか?**
 - **aptitude と APT (Advanced Packaging Tool) の違いは何ですか?**
 - **AppArmor とは何ですか?**
