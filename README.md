@@ -106,6 +106,144 @@ mac=$(ip link | grep "link/ether" | awk '{print $2}') # MACアドレス
 # sudoコマンドの実行回数を取得
 cmnd=$(journalctl _COMM=sudo | grep COMMAND | wc -l)
 # システム情報をすべてのユーザーに通知
+wall "
+	# アーキテクチャ情報を表示
+	Architecture: $arch
+	# 物理CPUの数を表示
+	CPU physical: $cpuf
+	# 仮想CPU（vCPU）の数を表示
+	vCPU: $cpuv
+	# メモリ使用量を表示（使用メモリ / 総メモリ）と使用率（%）を表示
+	Memory Usage: $ram_use/${ram_total}MB ($ram_percent%)
+	# ディスク使用量を表示（使用ディスク容量 / 総ディスク容量）と使用率（%）を表示
+	Disk Usage: $disk_use/${disk_total} ($disk_percent%)
+	# CPU負荷のパーセントを表示
+	CPU load: $cpu_fin%
+	# 最後にシステムが起動した日時を表示
+	Last boot: $lb
+	# LVM（Logical Volume Management）が使用されているかどうかを表示
+	LVM use: $lvmu
+	# 確立されているTCP接続数を表示
+	Connections TCP: $tcpc ESTABLISHED
+	# 現在システムにログインしているユーザー数を表示
+	User log: $ulog
+	# システムのIPアドレスとMACアドレスを表示
+	Network: IP $ip ($mac)
+	# sudo コマンドで実行されたコマンドの数を表示
+	Sudo: $cmnd cmd
+"
+```
+## 詳細説明 (Detail Explain)
+
+#!/bin/bash
+
+# システムアーキテクチャの取得
+# uname: システムに関する情報を取得するコマンド
+# -a: 以下の情報をすべて表示
+#   - カーネル名（OSの種類）
+#   - ホスト名
+#   - カーネルリリース
+#   - カーネルバージョン
+#   - マシンのハードウェア名
+#   - プロセッサの種類
+#   - ハードウェアプラットフォーム
+#   - オペレーティングシステム名
+# $(): コマンド置換
+arch=$(uname -a)
+
+# CPU情報の取得
+# grep: 指定ファイルから抽出
+# physical id: 物理CPU（ソケット）の識別番号
+# /proc/cpuinfo: CPUに関する情報を含む仮想ファイル
+# wc: カウント
+# -l: 行数
+cpuf=$(grep "physical id" /proc/cpuinfo | wc -l)
+# processor: 論理CPU（スレッド）の識別番号
+cpuv=$(grep "processor" /proc/cpuinfo | wc -l)
+
+# メモリ使用状況の取得
+# free: システムのメモリ使用状況を表示
+# --mega: 単位をMB（メガバイト）で表示
+# awk: テキスト処理を行うツール
+# free --megaの出力例:
+#               total        used        free      shared  buff/cache   available
+# Mem:          16000        8000        2000         500        6000        7000
+# Swap:          8192        1000        7192
+# $1 == "Mem:": 1列目（最初のフィールド）が"Mem:"である行を抽出
+# {print $2}: 2列目（= totalの値）を出力
+# {print $3}: 3列目（= usedの値）を出力
+# {printf("%.2f"), $3/$2*100}: 小数点2桁までのフォーマットで使用率を計算
+ram_total=$(free --mega | awk '$1 == "Mem:" {print $2}')
+ram_use=$(free --mega | awk '$1 == "Mem:" {print $3}')
+ram_percent=$(free --mega | awk '$1 == "Mem:" {printf("%.2f"), $3/$2*100}')
+
+# ディスク使用状況の取得
+# df: ディスクの使用状況を表示
+# -m: 単位がMB（メガバイト）
+# df -mの出力例:
+# Filesystem     1M-blocks  Used Available Use% Mounted on
+# udev              7999      0      7999   0% /dev
+# tmpfs             1600      2      1598   1% /run
+# /dev/sda1       512000 200000    312000  39% /
+# /dev/sdb1      1024000 500000    524000  49% /mnt/data
+# /dev/sdc1       256000  80000    176000  31% /boot
+# -v: 除外（逆マッチ）
+# {disk_t += $2}: 2列目（総サイズ）をdisk_tに加算していく
+# disk_t: 総ディスク容量
+# {disk_u += $3}: 3列目（使用済み容量）をdisk_uに加算していく
+# disk_u: 使用中のディスク容量
+# END: すべての行の処理が終わった後に実行されるブロック
+disk_total=$(df -m | grep "/dev/" | grep -v "/boot" | awk '{disk_t += $2} END {printf ("%.1fGb\n"), disk_t/1024}')
+disk_use=$(df -m | grep "/dev/" | grep -v "/boot" | awk '{disk_u += $3} END {print disk_u}')
+disk_percent=$(df -m | grep "/dev/" | grep -v "/boot" | awk '{disk_u += $3} {disk_t+= $2} END {printf("%d"), disk_u/disk_t*100}')
+
+# CPU負荷の計算
+# vmstat: システムのメモリ、プロセス、I/O、CPU使用率などを表示
+# 1: 1秒間隔で情報を表示
+# 2: 2回のデータ取得
+# tail: 後ろから抽出
+# -1: 最後の1行
+# expr: 数値計算
+cpul=$(vmstat 1 2 | tail -1 | awk '{printf $15}')
+cpu_op=$(expr 100 - $cpul)
+cpu_fin=$(printf "%.1f" $cpu_op)
+
+# LVMの使用状況確認
+# lsblk: ブロックデバイス（ディスクやパーティション）の情報を表示
+# lvm: LVM（論理ボリューム）
+# if [ $(...) -gt 0 ]: LVM関連の行が1行以上あるかどうかを確認
+# -gt 0: 0より大きい
+# echo yes: 真（LVMが存在する）の場合
+# echo no: 偽（LVMが存在しない）の場合
+lvmu=$(if [ $(lsblk | grep "lvm" | wc -l) -gt 0 ]; then echo yes; else echo no; fi)
+
+# ネットワーク接続情報の取得
+# ss: ソケット統計を表示、ネットワーク接続の状態を確認
+# -t: TCP接続だけを表示
+# -a: すべてのソケット（リスニング、確立済みなど）を表示
+# ESTAB:（確立状態）"Established"（確立）の略
+tcpc=$(ss -ta | grep ESTAB | wc -l)
+
+# ログインユーザー数の取得
+# users: 現在システムにログインしているユーザーを表示
+# -w: 単語数
+ulog=$(users | wc -w)
+
+# ネットワークアドレス情報の取得
+# hostname: システムのホスト名やネットワーク情報を表示
+# -I: システムに割り当てられたIPアドレスを表示
+# ip link: ネットワークインターフェースの状態を表示
+ip=$(hostname -I)
+mac=$(ip link | grep "link/ether" | awk '{print $2}')
+
+# sudo使用回数の取得
+# journalctl: systemdのログ管理ツール
+# _COMM=sudo: sudoコマンドで実行されたログエントリのみをフィルタリング
+# COMMAND: sudoを使って実行された実際のコマンドがログに記録される際の文字列
+cmnd=$(journalctl _COMM=sudo | grep COMMAND | wc -l)
+
+# 情報の表示
+# wall: メッセージをすべてのユーザーに表示
 wall "	Architecture: $arch
 	CPU physical: $cpuf
 	vCPU: $cpuv
@@ -118,6 +256,3 @@ wall "	Architecture: $arch
 	User log: $ulog
 	Network: IP $ip ($mac)
 	Sudo: $cmnd cmd"
-```
-## 詳細説明 (Detail Explain)
-
