@@ -56,6 +56,19 @@ Debianは安定性が高く、オープンソースでコミュニティ主導�
 `aptitude`と`apt`は両方ともパッケージ管理ツールですが、`aptitude`はユーザーインターフェースが強化されており、パッケージの依存関係を視覚的に表示する機能があります。一方、`apt`はよりシンプルで、主にスクリプトやシステム管理者向けに使用されます。
 `SELinux`と`AppArmor`は、どちらもセキュリティの強化を目的としたLinuxのセキュリティモジュールです。`SELinux`は、アクセス制御を細かく設定することでシステムを保護しますが、設定が複雑です。`AppArmor`は、シンプルで直感的なアクセス制御を提供し、特定のアプリケーションのみにセキュリティポリシーを適用します。どちらもシステムのセキュリティを高めるための重要なツールですが、設定や運用において異なるアプローチをとります。
 
+## 11. Linuxとは?
+OSの一つで、無料で使えるオープンソース
+
+## 12. ディストリビューションとは?
+Linuxのアプリケーションやライブラリをひとまとめにして、PCにインストールすれば使える状態にした配布物（`Debian`,`Ubuntu`,`Rocky`,`CentOS`）など
+
+## 13. パッケージとは?
+ソフトウェア実行に必要なものをファイルにまとめたもの（`実行ファイル`,`ライブラリ`,`設定ファイル`,`リソース`）など
+
+## 14. パッケージ管理とは?
+インストール・アンインストールを管理、パッケージをリポジトリから自動で探す、依存関係の解決（`apt`,`yum`,`rpm`）など
+
+
 ---
 
 ## 設定 (Setting)
@@ -299,3 +312,60 @@ cmnd=$(journalctl _COMM=sudo | grep COMMAND | wc -l)
 wall "..."
 ```
 - `wall`: メッセージをすべてのユーザーに表示
+
+# README
+
+このREADMEでは、Linuxシステムで使用される各コマンドとその目的を説明します。
+
+## コマンド一覧
+
+### 1. `su` / `sudo`
+- **`su`**: スーパーユーザーまたは他のユーザーに切り替えるためのコマンド。通常、`su`の後にユーザー名を指定します。
+- **`sudo reboot`**: 管理者権限でシステムを再起動します。
+
+### 2. `sudo -V`
+- **`sudo -V`**: `sudo`コマンドのバージョン情報を表示します。
+
+### 3. `sudo apt update`
+- **`sudo apt update`**: パッケージリストを更新し、最新の情報を取得します。
+
+### 4. SSH
+- **`ssh mtsubasa@localhost -p 4242`**: ローカルホストのポート4242で、`mtsubasa`ユーザーとしてSSH接続します。
+- **`sudo systemctl status ssh`**: SSHサービスの状態を確認します。
+- **`sudo service ssh status`**: `ssh`サービスのステータスを確認します。
+- **`sudo vim /etc/ssh/sshd_config`**: SSHの設定ファイルを編集します。
+- **`sudo service ssh restart`**: SSHサービスを再起動します。
+
+### 5. UFW（Uncomplicated Firewall）
+- **`sudo ufw status`**: UFW（ファイアウォール）の現在のステータスを確認します。
+- **`sudo ufw allow 4242`**: ポート4242をファイアウォールで許可します。
+- **`sudo ufw delete allow 4242`**: ポート4242の許可を削除し、拒否します。
+- **`sudo ufw enable`**: UFWを有効にします。
+
+### 6. ファイル操作
+- **`touch /etc/sudoers.d/sudo_config`**: `/etc/sudoers.d/`ディレクトリに新しい設定ファイルを作成します。
+- **`shasum [machinename].vdi`**: 指定したファイルのSHA1ハッシュを計算します。
+
+### 7. インストール
+- **`apt install sudo`**: `sudo`パッケージをインストールします。
+- **`sudo apt install openssh-server`**: OpenSSHサーバーをインストールします。
+- **`sudo apt install ufw`**: UFW（簡易ファイアウォール）をインストールします。
+- **`sudo apt install libpam-pwquality`**: パスワード品質を管理するための`libpam-pwquality`パッケージをインストールします。
+
+### 8. ユーザー・グループ管理
+- **`sudo adduser <login>`**: 新しいユーザーを作成します。
+- **`sudo addgroup user42`**: 新しいグループ`user42`を作成します。
+- **`getent group <groupname>`**: 指定したグループの情報を表示します。
+- **`sudo adduser <user> <groupname>`**: ユーザーを指定したグループに追加します。
+
+### 9. ファイル編集
+- **`sudo vim /etc/ssh/sshd_config`**: SSH設定ファイルを`vim`で編集します。
+- **`vim /etc/sudoers.d/sudo_config`**: `sudoers`設定ファイルを編集します。
+- **`vim /etc/login.defs`**: ログインに関する設定ファイルを編集します。
+- **`vim /etc/pam.d/common-password`**: パスワード管理の設定ファイルを編集します。
+- **`vim monitoring.sh`**: `monitoring.sh`スクリプトを編集します。
+
+### 10. `cron`の編集
+- **`sudo crontab -u root -e`**: `root`ユーザーのcrontab（定期実行タスク）を編集します。
+
+---
